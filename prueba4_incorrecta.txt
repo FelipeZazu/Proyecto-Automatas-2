@@ -1,14 +1,14 @@
-y float num
-z int num
+y float ;
+z int ;
 
-if x == z then
+if x == y then
 	begin
 		if y == z then
-			print z + z
+			print x + z
 		else
-			print y + x
+			print y + z
 	end
 else
-			print x + z
+			print x + y
 		then
 			print z + z

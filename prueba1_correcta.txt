@@ -7,6 +7,6 @@ else
 	begin
 		if var1 + var2 then
 			var1 := var2 + var1
-		else
+		else 
 			var2 := var1 + var2
 	end

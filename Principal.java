@@ -3,10 +3,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Scanner;
+
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
-
-// Screesnhot de Zazueta Perez Jesus Felipe
 
 public class Principal {
     private static Scanner in = new Scanner(System.in);
@@ -61,7 +60,8 @@ public class Principal {
             try (BufferedReader lector = new BufferedReader(new FileReader(archivo))) {
                 String linea;
                 while ((linea = lector.readLine()) != null) 
-                    codigo += linea;
+                    codigo += linea+" ";
+                lector.close();
                 return codigo;
             } catch (IOException e) {
                 System.out.println("Error al leer el archivo: " + e.getMessage());
