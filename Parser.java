@@ -69,22 +69,20 @@ public class Parser {
     }
     
     public Declarax D() {
-      if(tknCode == id) {
-        if(stringToCode(s.getToken(false)) == intx || stringToCode(s.getToken(false)) == floatx) {
-          String s = token;
-          eat(id); Typex t = T(); eat(semi); D();
-          tablaSimbolos.addElement(new Declarax(s, t));
-          return new Declarax(s, t);
-        }
-        else{return null;}
-      }
-
-      else if(tknCode != id){return null;}
-      else{
-        error(token, "(id)");
-        return null;
-      }            
+    // D -> id (int | float) ; D | ε
+    if (tknCode == id) {
+        String varName = token;
+        eat(id);
+        Typex t = T();
+        eat(semi);
+        Declarax decl = new Declarax(varName, t);
+        tablaSimbolos.addElement(decl);
+        D(); // llamadas recursivas para declaración múltiple
+        return decl; // opcional, dependiendo del uso
     }
+    // epsilon, termina la declaración
+    return null;
+}
     
     public Typex T() {
         if(tknCode == intx) {
@@ -101,50 +99,48 @@ public class Parser {
         }
     }
     
-    public Statx S() { //return statement
-        switch(tknCode) {
+    public Statx S() {
+        // S -> if E then S else S | begin S L | id := E | print E
+        switch (tknCode) {
             case ifx:
-                Expx e1;
-                Statx s1, s2;
                 eat(ifx);
-                e1= E();
+                Expx e1 = E();
                 eat(thenx);
-                s1=S();
+                Statx s1 = S();
                 eat(elsex);
-                s2=S();                
+                Statx s2 = S();
                 return new Ifx(e1, s1, s2);
-
-                
             case beginx:
-                eat(beginx);    S();    L();
-                return null;
-                
+                eat(beginx);
+                Statx s = S();
+                L(); // procesa la lista de sentencias hasta end
+                return s;
             case id:
-                Idx i;
-                Expx e;
-                eat(id);   i=new Idx(tokenActual);  declarationCheck(tokenActual); byteCode("igual", tokenActual);  eat(igual);   e=E();
-                return new Asignax(i, e);
-                
+                String ident = token;
+                eat(id);
+                declarationCheck(ident);
+                eat(igual);
+                Expx e = E();
+                return new Asignax(new Idx(ident), e);
             case printx:
-                Expx ex;
-                eat(printx);    ex=E();
+                eat(printx);
+                Expx ex = E();
                 return new Printx(ex);
-                
-            default: error(token, "(if | begin | id | print)");
+            default:
+                error(token, "(if | begin | id | print)");
                 return null;
         }
     }
-    
-    public void L() {       
-        switch(tknCode) {
-            case endx:
-                eat(endx);
-            break;
-                
-            case semi:
-                eat(semi);      S();    L();
-            break;
-            default: error(token, "(end | ;)");
+    public void L() {
+        // L -> end | ; S L
+        if (tknCode == endx) {
+            eat(endx);
+        } else if (tknCode == semi) {
+            eat(semi);
+            S();
+            L();
+        } else {
+            error(token, "(end | ;)");
         }
     }
     
@@ -385,4 +381,3 @@ public class Parser {
         return JBC;
     }    
 }
-
