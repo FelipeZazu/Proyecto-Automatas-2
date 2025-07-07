@@ -14,7 +14,7 @@ public class Parser {
     private Vector tablaSimbolos = new Vector();
     private final Scanner s;
     final int ifx=1, thenx=2, elsex=3, beginx=4, endx=5, printx=6, semi=7,
-            sum=8, igual=9, igualdad=10, intx=11, floatx=12, id=13;
+            sum=8, igual=9, igualdad=10, intx=11, floatx=12, id=13, doublex=14, longx=15;
     private int tknCode, tokenEsperado;
     private String token, tokenActual, log;
     
@@ -93,8 +93,16 @@ public class Parser {
             eat(floatx);
             return new Typex("float");
         }
+        else if(tknCode == doublex) {
+            eat(doublex);
+            return new Typex("double"); 
+        }
+        else if(tknCode == longx) {
+            eat(longx);
+            return new Typex("long"); 
+        }
         else{
-            error(token, "(int / float)");
+            error(token, "(int / float / double / long)");
             return null;
         }
     }
@@ -220,6 +228,8 @@ public class Parser {
             case "==": codigo=10; break;
             case "int": codigo=11; break;
             case "float": codigo=12; break;
+            case "double": codigo=14; break;
+            case "long": codigo=15; break;
             default: codigo=13; break;
         }
         return codigo;
@@ -297,10 +307,20 @@ public class Parser {
               elementoCompara2 = (Declarax) tablaSimbolos.elementAt(j);
               if(s2.equals(elementoCompara2.s1)) {
                 System.out.println("Se encontró el segundo elemento en la tabla de símbolos...");
-                if(tipo[i].equals(tipo[j])) {
+                /*if(tipo[i].equals(tipo[j])) {
                   termino = true;
                   break;
-                }else{
+                }*/
+                if (tipo[i].equals(tipo[j]) ||
+                    (tipo[i].equals("int") && tipo[j].equals("long")) ||
+                    (tipo[i].equals("long") && tipo[j].equals("int")) ||
+                    (tipo[i].equals("float") && tipo[j].equals("double")) ||
+                    (tipo[i].equals("double") && tipo[j].equals("float"))
+                ) {
+                    termino = true;
+                    break;
+                }
+else{
                   termino = true;
                     javax.swing.JOptionPane.showMessageDialog(null, "Incompatibilidad de tipos: "+ elementoCompara1.s1 +" ("
                       + elementoCompara1.s2.getTypex() + "), "+elementoCompara2.s1 +" (" + elementoCompara2.s2.getTypex()
@@ -317,34 +337,60 @@ public class Parser {
         }
     }
     
-    public void byteCode(String tipo, String s1,String s2){
-        int pos1=-1, pos2=-1;
-        
-        for(int i=0; i<variable.length; i++) {
-            if(s1.equals(variable[i])) {
-                pos1 = i;
-            }
-            if(s2.equals(variable[i])) {
-                pos2 = i;
-            }
-        }
-        
-        switch(tipo) {
-          case "igualdad":
-            ipbc(cntIns + ": iload_"+pos1);
-            ipbc(cntIns + ": iload_"+pos2);
-            ipbc(cntIns + ": ifne " + (cntIns+4));
-            jmp1 = cntBC;
-          break;
+// Generación de Bytecode para operaciones con dos operandos
+public void byteCode(String tipo, String s1, String s2) {
+    int pos1 = -1, pos2 = -1;
 
-          case "suma":
-            ipbc(cntIns + ": iload_"+pos1);
-            ipbc(cntIns + ": iload_"+pos2);
-            ipbc(cntIns + ": iadd");
-            jmp2 = cntBC;
-          break;
+    for (int i = 0; i < variable.length; i++) {
+        if (s1.equals(variable[i])) {
+            pos1 = i;
+        }
+        if (s2.equals(variable[i])) {
+            pos2 = i;
         }
     }
+
+    switch (tipo) {
+        case "igualdad":
+            ipbc(cntIns + ": iload_" + pos1);
+            ipbc(cntIns + ": iload_" + pos2);
+            ipbc(cntIns + ": ifne " + (cntIns + 4));
+            jmp1 = cntBC;
+            break;
+
+        case "suma":
+            ipbc(cntIns + ": iload_" + pos1);
+            ipbc(cntIns + ": iload_" + pos2);
+            ipbc(cntIns + ": iadd");
+            jmp2 = cntBC;
+            break;
+
+        case "resta":
+            ipbc(cntIns + ": iload_" + pos1);
+            ipbc(cntIns + ": iload_" + pos2);
+            ipbc(cntIns + ": isub");
+            jmp2 = cntBC;
+            break;
+
+        case "multiplicacion":
+            ipbc(cntIns + ": iload_" + pos1);
+            ipbc(cntIns + ": iload_" + pos2);
+            ipbc(cntIns + ": imul");
+            jmp2 = cntBC;
+            break;
+
+        case "division":
+            ipbc(cntIns + ": iload_" + pos1);
+            ipbc(cntIns + ": iload_" + pos2);
+            ipbc(cntIns + ": idiv");
+            jmp2 = cntBC;
+            break;
+    }
+}
+
+
+
+    
     
     public void byteCode(String tipo, String s1) {
         int pos1 = -1;
@@ -353,6 +399,8 @@ public class Parser {
                 pos1 = i;
             }
         }
+
+
         switch(tipo) {
             case "igual":
                 pilaBC[cntBC+3] = cntIns+4 + ": istore_" + pos1;
