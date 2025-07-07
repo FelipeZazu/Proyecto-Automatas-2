@@ -14,7 +14,7 @@ public class Parser {
     private Vector tablaSimbolos = new Vector();
     private final Scanner s;
     final int ifx=1, thenx=2, elsex=3, beginx=4, endx=5, printx=6, semi=7,
-            sum=8, igual=9, igualdad=10, intx=11, floatx=12, id=13, doublex=14, longx=15;
+            sum=8, igual=9, igualdad=10, intx=11, floatx=12, id=13, doublex=14, longx=15,divix=16,multix=17,restax=18;
     private int tknCode, tokenEsperado;
     private String token, tokenActual, log;
     
@@ -50,6 +50,7 @@ public class Parser {
     }
     
     public void eat(int t) {
+        System.out.println(t);
         tokenEsperado = t;
         if(tknCode == t) {
             setLog("Token: " + token + "\n" + "Tipo:  "+ s.getTipoToken());
@@ -62,27 +63,37 @@ public class Parser {
     
     public Programax P() {
         Declarax d = D();
+        System.out.println("listo");
         createTable();
         Statx s = S();
-        
         return new Programax(tablaSimbolos,s);
     }
     
     public Declarax D() {
-    // D -> id (int | float) ; D | ε
     if (tknCode == id) {
         String varName = token;
-        eat(id);
-        Typex t = T();
-        eat(semi);
-        Declarax decl = new Declarax(varName, t);
-        tablaSimbolos.addElement(decl);
-        D(); // llamadas recursivas para declaración múltiple
-        return decl; // opcional, dependiendo del uso
+        String nextToken = s.peekToken(); // Usar un método de 'peek' en el scanner para ver el siguiente sin consumirlo
+
+        // Verifica si nextToken es un tipo válido
+        if (nextToken.equals("int") || nextToken.equals("float") ||
+            nextToken.equals("double") || nextToken.equals("long")) {
+
+            // Continúa como declaración
+            eat(id);
+            Typex t = T();  // Aquí solo se llama si el nextToken es un tipo
+            eat(semi);
+            Declarax decl = new Declarax(varName, t);
+            tablaSimbolos.addElement(decl);
+            D(); // Llamada recursiva para más declaraciones
+            return decl;
+        }
+        // Si no es un tipo, simplemente termina, no es declaración
     }
-    // epsilon, termina la declaración
+    // Retorna null si no hay más declaraciones que procesar o no es declaración
     return null;
 }
+
+
     
     public Typex T() {
         if(tknCode == intx) {
@@ -174,16 +185,47 @@ public class Parser {
                    return new Sumax(i1, i2);
                    
                case igualdad:
+                    comp2 = tokenActual;
+                    eat(igualdad);
+                    eat(id);
+                    i2 = new Idx(comp2);
+                    declarationCheck(comp2);
+                    compatibilityCheck(comp1,comp2);
+                    byteCode("igualdad", comp1, comp2);
+                    return new Comparax(i1, i2);
+                
+                case restax:  
                    comp2 = tokenActual;
-                   eat(igualdad);   eat(id);
-                   i2 = new Idx(comp2);
+                   eat(restax);   eat(id);
+                   i2 = new Idx(comp2); //(tokenActual)
                    declarationCheck(comp2);
                    compatibilityCheck(comp1,comp2);
-                   byteCode("igualdad", comp1, comp2);
-                   return new Comparax(i1, i2);
-                   
+                   byteCode("resta", comp1, comp2);
+                   System.out.println("Operación: " + comp1 + "-" + comp2);
+                   return new Restax(i1, i2);
+
+                case divix:  
+                   comp2 = tokenActual;
+                   eat(divix);   eat(id);
+                   i2 = new Idx(comp2); //(tokenActual)
+                   declarationCheck(comp2);
+                   compatibilityCheck(comp1,comp2);
+                   byteCode("division", comp1, comp2);
+                   System.out.println("Operación: " + comp1 + "/" + comp2);
+                   return new Divisionx(i1, i2);
+                
+               case multix:  
+                   comp2 = tokenActual;
+                   eat(multix);   eat(id);
+                   i2 = new Idx(comp2); //(tokenActual)
+                   declarationCheck(comp2);
+                   compatibilityCheck(comp1,comp2);
+                   byteCode("multiplicacion", comp1, comp2);
+                   System.out.println("Operación: " + comp1 + "*" + comp2);
+                   return new Multiplicacionx(i1, i2);
+
                default: 
-                   error(token, "(+ / ==)");
+                   error(token, "(+ | - | * | / | ==)");
                    return null;
            }
        }
@@ -216,21 +258,24 @@ public class Parser {
     public int stringToCode(String t) {
         int codigo = 0;
         switch(t) {
-            case "if": codigo=1; break;    
-            case "then": codigo=2; break;
-            case "else": codigo=3; break;
-            case "begin": codigo=4; break;
-            case "end": codigo=5; break;
-            case "print": codigo=6; break;
-            case ";": codigo=7; break;
-            case "+": codigo=8; break;
-            case ":=": codigo=9; break;
-            case "==": codigo=10; break;
-            case "int": codigo=11; break;
-            case "float": codigo=12; break;
-            case "double": codigo=14; break;
-            case "long": codigo=15; break;
-            default: codigo=13; break;
+            case "if": codigo=ifx; break;    
+            case "then": codigo=thenx; break;
+            case "else": codigo=elsex; break;
+            case "begin": codigo=beginx; break;
+            case "end": codigo=endx; break;
+            case "print": codigo=printx; break;
+            case ";": codigo=semi; break;
+            case "+": codigo=sum; break;
+            case ":=": codigo=igual; break;
+            case "==": codigo=igualdad; break;
+            case "int": codigo=intx; break;
+            case "float": codigo=floatx; break;
+            case "double": codigo=doublex; break;
+            case "long": codigo=longx; break;
+            case "-": codigo=restax; break;
+            case "*": codigo=multix; break;
+            case "/": codigo=divix; break;
+            default: codigo=id; break;
         }
         return codigo;
     }
@@ -266,7 +311,7 @@ public class Parser {
             Typex tx;
             dx = (Declarax)tablaSimbolos.get(i);
             variable[i] = dx.s1;
-            tipo[i] = dx.s2.getTypex();                   
+            tipo[i] = dx.s2.getTypex();
             System.out.println(variable[i] + ": "+ tipo[i]); //Imprime tabla de símbolos por consola.
         }
         
@@ -337,60 +382,52 @@ else{
         }
     }
     
-// Generación de Bytecode para operaciones con dos operandos
-public void byteCode(String tipo, String s1, String s2) {
-    int pos1 = -1, pos2 = -1;
-
-    for (int i = 0; i < variable.length; i++) {
-        if (s1.equals(variable[i])) {
-            pos1 = i;
+    public void byteCode(String tipo, String s1,String s2){
+        int pos1=-1, pos2=-1;
+        
+        for(int i=0; i<variable.length; i++) {
+            if(s1.equals(variable[i])) {
+                pos1 = i;
+            }
+            if(s2.equals(variable[i])) {
+                pos2 = i;
+            }
         }
-        if (s2.equals(variable[i])) {
-            pos2 = i;
-        }
-    }
-
-    switch (tipo) {
-        case "igualdad":
-            ipbc(cntIns + ": iload_" + pos1);
-            ipbc(cntIns + ": iload_" + pos2);
-            ipbc(cntIns + ": ifne " + (cntIns + 4));
+        
+        switch(tipo) {
+          case "igualdad":
+            ipbc(cntIns + ": iload_"+pos1);
+            ipbc(cntIns + ": iload_"+pos2);
+            ipbc(cntIns + ": ifne " + (cntIns+4));
             jmp1 = cntBC;
-            break;
+          break;
 
-        case "suma":
-            ipbc(cntIns + ": iload_" + pos1);
-            ipbc(cntIns + ": iload_" + pos2);
+          case "suma":
+            ipbc(cntIns + ": iload_"+pos1);
+            ipbc(cntIns + ": iload_"+pos2);
             ipbc(cntIns + ": iadd");
             jmp2 = cntBC;
-            break;
-
-        case "resta":
-            ipbc(cntIns + ": iload_" + pos1);
-            ipbc(cntIns + ": iload_" + pos2);
-            ipbc(cntIns + ": isub");
+          break;
+          case "resta":
+            ipbc(cntIns + ": iload_"+pos1);
+            ipbc(cntIns + ": iload_"+pos2);
+            ipbc(cntIns + ": ires");
             jmp2 = cntBC;
-            break;
-
-        case "multiplicacion":
-            ipbc(cntIns + ": iload_" + pos1);
-            ipbc(cntIns + ": iload_" + pos2);
-            ipbc(cntIns + ": imul");
+          break;
+          case "multiplicacion":
+            ipbc(cntIns + ": iload_"+pos1);
+            ipbc(cntIns + ": iload_"+pos2);
+            ipbc(cntIns + ": imult");
             jmp2 = cntBC;
-            break;
-
-        case "division":
-            ipbc(cntIns + ": iload_" + pos1);
-            ipbc(cntIns + ": iload_" + pos2);
+          break;
+          case "division":
+            ipbc(cntIns + ": iload_"+pos1);
+            ipbc(cntIns + ": iload_"+pos2);
             ipbc(cntIns + ": idiv");
             jmp2 = cntBC;
-            break;
+          break;
+        }
     }
-}
-
-
-
-    
     
     public void byteCode(String tipo, String s1) {
         int pos1 = -1;
@@ -399,8 +436,6 @@ public void byteCode(String tipo, String s1, String s2) {
                 pos1 = i;
             }
         }
-
-
         switch(tipo) {
             case "igual":
                 pilaBC[cntBC+3] = cntIns+4 + ": istore_" + pos1;

@@ -1,4 +1,4 @@
-var1 int ;
+var1 long ;
 var2 int ;
 
 if var1 == var2 then
@@ -6,7 +6,7 @@ if var1 == var2 then
 else
 	begin
 		if var1 + var2 then
-			var1 := var2 + var1
+			var1 := var2 / var1
 		else 
-			var2 := var1 + var2
+			var2 := var1 * var2
 	end

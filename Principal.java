@@ -32,13 +32,18 @@ public class Principal {
                 case 2->{
                     codigo = LeerArchivo();
                 }
+                case 3->{
+                    codigo = LeerArchivoEstatico();
+                }
                 default->{
                     System.out.println("Opcion Invalida");
                     continue;
                 }
             }
-            if(codigo != null)
+            if(codigo != null){
                 new Parser(codigo);
+                break;
+            }
             System.out.println();
         }while(op != 0);
     }
@@ -69,6 +74,21 @@ public class Principal {
         } else {
             System.out.println("No se seleccionó ningún archivo.");
         }
+        return null;
+    }
+
+
+    private static String LeerArchivoEstatico(){
+        String codigo = "";
+        try (BufferedReader lector = new BufferedReader(new FileReader(new File("prueba3_correcta.txt")))) {
+                String linea;
+                while ((linea = lector.readLine()) != null) 
+                    codigo += linea+" ";
+                lector.close();
+                return codigo;
+            } catch (IOException e) {
+                System.out.println("Error al leer el archivo: " + e.getMessage());
+            }
         return null;
     }
 }

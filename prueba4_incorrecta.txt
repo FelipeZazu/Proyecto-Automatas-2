@@ -4,11 +4,11 @@ z int ;
 if x == y then
 	begin
 		if y == z then
-			print x + z
+			print x * z
 		else
-			print y + z
+			print y - z
 	end
 else
-			print x + y
+			print x / y
 		then
 			print z + z

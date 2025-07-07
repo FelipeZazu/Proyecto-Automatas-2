@@ -12,7 +12,7 @@ public class Scanner {
     private String tipoToken;
     private String token;
     private final String[] reservadas = {"if", "then", "else", "begin", "print", "end", "int", "float", "double", "long"};
-    private final String[] operadores = {"==", ":=", "+"};
+    private final String[] operadores = {"==", ":=", "+","-","*","/"};
     private final String delimitador = ";";
 
 
@@ -84,7 +84,16 @@ public class Scanner {
         }
         return token;
     }
-    
+
+    public String peekToken() {
+        if (k < tokens.length) {
+            return tokens[k];
+        }
+        return ""; // Devuelve una cadena vacía si se ha alcanzado el final
+    }
+
+    // En tu clase Scanner
+
     public boolean validaIdentificador(String t) {
         boolean tokenValido = false;
         char[] charArray;
