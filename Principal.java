@@ -42,7 +42,6 @@ public class Principal {
             }
             if(codigo != null){
                 new Parser(codigo);
-                break;
             }
             System.out.println();
         }while(op != 0);
@@ -80,7 +79,7 @@ public class Principal {
 
     private static String LeerArchivoEstatico(){
         String codigo = "";
-        try (BufferedReader lector = new BufferedReader(new FileReader(new File("prueba3_correcta.txt")))) {
+        try (BufferedReader lector = new BufferedReader(new FileReader(new File("prueba1_correcta.txt")))) {
                 String linea;
                 while ((linea = lector.readLine()) != null) 
                     codigo += linea+" ";

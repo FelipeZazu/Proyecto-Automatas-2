@@ -1,12 +1,11 @@
-var1 long ;
-var2 int ;
+x int ;
+y int ;
+z int ;
 
-if var1 == var2 then
-	print var1 + var2
-else
-	begin
-		if var1 + var2 then
-			var1 := var2 / var1
-		else 
-			var2 := var1 * var2
-	end
+while x == y do
+    begin
+        print x + y ;
+        z := x + y ;
+        print z + x ;
+        x := x + z ;
+    end

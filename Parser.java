@@ -14,7 +14,7 @@ public class Parser {
     private Vector tablaSimbolos = new Vector();
     private final Scanner s;
     final int ifx=1, thenx=2, elsex=3, beginx=4, endx=5, printx=6, semi=7,
-            sum=8, igual=9, igualdad=10, intx=11, floatx=12, id=13, doublex=14, longx=15,divix=16,multix=17,restax=18;
+            sum=8, igual=9, igualdad=10, intx=11, floatx=12, id=13, doublex=14, longx=15,divix=16,multix=17,restax=18, whilex=19,dox=20;
     private int tknCode, tokenEsperado;
     private String token, tokenActual, log;
     
@@ -63,38 +63,35 @@ public class Parser {
     
     public Programax P() {
         Declarax d = D();
-        System.out.println("listo");
         createTable();
         Statx s = S();
         return new Programax(tablaSimbolos,s);
     }
     
     public Declarax D() {
-    if (tknCode == id) {
-        String varName = token;
-        String nextToken = s.peekToken(); // Usar un método de 'peek' en el scanner para ver el siguiente sin consumirlo
+        if (tknCode == id) {
+            String varName = token;
+            String nextToken = s.peekToken(); // Usar un método de 'peek' en el scanner para ver el siguiente sin consumirlo
 
-        // Verifica si nextToken es un tipo válido
-        if (nextToken.equals("int") || nextToken.equals("float") ||
-            nextToken.equals("double") || nextToken.equals("long")) {
+            // Verifica si nextToken es un tipo válido
+            if (nextToken.equals("int") || nextToken.equals("float") ||
+                nextToken.equals("double") || nextToken.equals("long")) {
 
-            // Continúa como declaración
-            eat(id);
-            Typex t = T();  // Aquí solo se llama si el nextToken es un tipo
-            eat(semi);
-            Declarax decl = new Declarax(varName, t);
-            tablaSimbolos.addElement(decl);
-            D(); // Llamada recursiva para más declaraciones
-            return decl;
+                // Continúa como declaración
+                eat(id);
+                Typex t = T();  // Aquí solo se llama si el nextToken es un tipo
+                eat(semi);
+                Declarax decl = new Declarax(varName, t);
+                tablaSimbolos.addElement(decl);
+                D(); // Llamada recursiva para más declaraciones
+                return decl;
+            }
+            // Si no es un tipo, simplemente termina, no es declaración
         }
-        // Si no es un tipo, simplemente termina, no es declaración
+        // Retorna null si no hay más declaraciones que procesar o no es declaración
+        return null;
     }
-    // Retorna null si no hay más declaraciones que procesar o no es declaración
-    return null;
-}
 
-
-    
     public Typex T() {
         if(tknCode == intx) {
             eat(intx);
@@ -119,7 +116,7 @@ public class Parser {
     }
     
     public Statx S() {
-        // S -> if E then S else S | begin S L | id := E | print E
+        // S -> if E then S else S | while E do S | begin S L | id := E | print E
         switch (tknCode) {
             case ifx:
                 eat(ifx);
@@ -129,6 +126,12 @@ public class Parser {
                 eat(elsex);
                 Statx s2 = S();
                 return new Ifx(e1, s1, s2);
+            case whilex:
+                eat(whilex);
+                Expx we = E();
+                eat(dox);
+                Statx ws = S();
+                return new whilex(we, ws);
             case beginx:
                 eat(beginx);
                 Statx s = S();
@@ -146,7 +149,7 @@ public class Parser {
                 Expx ex = E();
                 return new Printx(ex);
             default:
-                error(token, "(if | begin | id | print)");
+                error(token, "(if | begin | id | print | while | do)");
                 return null;
         }
     }
@@ -156,6 +159,10 @@ public class Parser {
             eat(endx);
         } else if (tknCode == semi) {
             eat(semi);
+            if (tknCode == endx) {
+                eat(endx);
+                return;
+            }
             S();
             L();
         } else {
@@ -275,6 +282,8 @@ public class Parser {
             case "-": codigo=restax; break;
             case "*": codigo=multix; break;
             case "/": codigo=divix; break;
+            case "while": codigo=whilex; break;
+            case "do": codigo=dox; break;
             default: codigo=id; break;
         }
         return codigo;
