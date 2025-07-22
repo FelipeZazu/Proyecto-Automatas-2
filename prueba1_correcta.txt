@@ -1,11 +1,8 @@
 x int ;
 y int ;
-z int ;
+z long ;
 
-while x == y do
-    begin
-        print x + y ;
-        z := x + y ;
-        print z + x ;
-        x := x + z ;
-    end
+repeat 
+    y := x - z
+until
+    x == z

@@ -33,57 +33,57 @@ public class Scanner {
     }
     
 //MÉTODO que retorna tokens válidos al parser
-    public String getToken(boolean b) {
-        boolean tokenValido = false;
-        token = tokens[k];
-        if(b) {
-            if(k < tokens.length-1) {
-            k++;
-            }
+    public String getToken(boolean avanzar) {
+    if (k >= tokens.length) {
+        return null; // Se terminó la entrada
+    }
+
+    token = tokens[k];
+
+    if (avanzar) {
+        k++;
+    }
+
+    // VERIFICACIÓN LÉXICA
+    boolean tokenValido = false;
+
+    for (String reservada : reservadas) {
+        if (token.equalsIgnoreCase(reservada)) {
+            tokenValido = true;
+            setTipoToken("Palabra reservada", avanzar);
+            break;
         }
-                
-        //VERIFICACIÓN LÉXICA
-        //Palabras reservadas:
-        for (String reservada : reservadas) {
-            if (token.equalsIgnoreCase(reservada)) {
+    }
+
+    if (!tokenValido) {
+        for (String operador : operadores) {
+            if (token.equals(operador)) {
                 tokenValido = true;
-                setTipoToken("Palabra reservada", b);
+                setTipoToken("Operador", avanzar);
                 break;
             }
         }
-            //Operadores:
-        if(!tokenValido) {
-            for(String operador : operadores) {
-                if(token.equals(operador)) {
-                    tokenValido = true;
-                    setTipoToken("Operador", b);
-                    break;
-                }
-            }
-        }
-            //Delimitador:
-        if(!tokenValido) {
-            if(token.equals(delimitador)) {
-                tokenValido = true;
-                setTipoToken("Delimitador", b);
-            }
-        }
-        
-            //Identificadores:
-        if(!tokenValido) {
-            if(validaIdentificador(token)) {
-                tokenValido = true;
-                setTipoToken("Identificador", b);
-            }
-        }
-        
-            //Error:
-        if(!tokenValido) {
-            error("el token \"" + token + "\" es inválido para el lenguaje.");
-            return "TOKEN INVÁLIDO";
-        }
-        return token;
     }
+
+    if (!tokenValido) {
+        if (token.equals(delimitador)) {
+            tokenValido = true;
+            setTipoToken("Delimitador", avanzar);
+        }
+    }
+
+    if (!tokenValido && validaIdentificador(token)) {
+        tokenValido = true;
+        setTipoToken("Identificador", avanzar);
+    }
+
+    if (!tokenValido) {
+        error("el token \"" + token + "\" es inválido para el lenguaje.");
+        return "TOKEN INVÁLIDO";
+    }
+
+    return token;
+}
 
     public String peekToken() {
         if (k < tokens.length) {

@@ -11,46 +11,51 @@ public class Parser {
     String[] tipo = null;
     String[] variable;
     String byteString;
-    private Vector tablaSimbolos = new Vector();
+    private Vector<Declarax> tablaSimbolos = new Vector();
     private final Scanner s;
     final int ifx=1, thenx=2, elsex=3, beginx=4, endx=5, printx=6, semi=7,
-            sum=8, igual=9, igualdad=10, intx=11, floatx=12, id=13, doublex=14, longx=15,divix=16,multix=17,restax=18, whilex=19,dox=20;
+            sum=8, igual=9, igualdad=10, intx=11, floatx=12, id=13, doublex=14, longx=15,divix=16,multix=17,restax=18, whilex=19,dox=20,repeatx=21,untilx=22;
     private int tknCode, tokenEsperado;
     private String token, tokenActual, log;
+
+    private int levelCode=0;
     
     //Sección de bytecode
     private int cntBC = 0; // Contador de lineas para el código bytecode
-    private String bc; // String temporal de bytecode
-    private int jmp1, jmp2, jmp3;
-    private int aux1, aux2, aux3;
+    private int uniqueID = 0;
     private String pilaBC[] = new String[100];
-    private String memoriaBC[] = new String[10];
-    private String pilaIns[] = new String [50];
-    private int retornos[]= new int[10];
     private int cntIns = 0;
+
+    private Statx codeIns[] = new Statx[100];
+    private int NumberIns = 0;
     //---------------------------------------------
-  
-/*     public static void main(String[] args){
-        //var1 int ; var2 int; if var1 == var2 then print var1 + var2 else begin	if var1 + var2 then var1 := var2 + var1	else var2 := var1 + var2 end
-        new Parser("var1 int ; var2 int ; var1 := var2 + var1 ; print var1 + var2 ;");
-    } */
+
+
     
     public Parser(String codigo) {  
         s = new Scanner(codigo);
         token = s.getToken(true);
         tknCode = stringToCode(token);
         p = P();
+        System.out.println(getBytecode());
     }
     
     //INICIO DE ANÁLISIS SINTÁCTICO
     public void advance() {
         token = s.getToken(true);
-        tokenActual = s.getToken(false);
+
+        if (token == null) {
+            tknCode = -1;
+            tokenActual = null;
+            return;
+        }
+
+        tokenActual = s.getToken(false); // peek
         tknCode = stringToCode(token);
     }
+
     
     public void eat(int t) {
-        System.out.println(t);
         tokenEsperado = t;
         if(tknCode == t) {
             setLog("Token: " + token + "\n" + "Tipo:  "+ s.getTipoToken());
@@ -64,14 +69,18 @@ public class Parser {
     public Programax P() {
         Declarax d = D();
         createTable();
-        Statx s = S();
+
+        Statx s;
+        while ((s = S()) != null) {
+        }
+
         return new Programax(tablaSimbolos,s);
     }
     
     public Declarax D() {
         if (tknCode == id) {
             String varName = token;
-            String nextToken = s.peekToken(); // Usar un método de 'peek' en el scanner para ver el siguiente sin consumirlo
+            String nextToken = s.peekToken();
 
             // Verifica si nextToken es un tipo válido
             if (nextToken.equals("int") || nextToken.equals("float") ||
@@ -83,6 +92,7 @@ public class Parser {
                 eat(semi);
                 Declarax decl = new Declarax(varName, t);
                 tablaSimbolos.addElement(decl);
+                
                 D(); // Llamada recursiva para más declaraciones
                 return decl;
             }
@@ -106,7 +116,7 @@ public class Parser {
             return new Typex("double"); 
         }
         else if(tknCode == longx) {
-            eat(longx);
+            eat(longx); 
             return new Typex("long"); 
         }
         else{
@@ -118,20 +128,43 @@ public class Parser {
     public Statx S() {
         // S -> if E then S else S | while E do S | begin S L | id := E | print E
         switch (tknCode) {
+            case -1:
+                return null;
             case ifx:
                 eat(ifx);
                 Expx e1 = E();
                 eat(thenx);
+                levelCode++;
                 Statx s1 = S();
                 eat(elsex);
                 Statx s2 = S();
-                return new Ifx(e1, s1, s2);
+                levelCode--;
+                Ifx temp = new Ifx(uniqueID++,e1, s1, s2);
+                if(levelCode == 0)
+                    codeIns[NumberIns++] = temp;
+                return temp;
             case whilex:
                 eat(whilex);
                 Expx we = E();
                 eat(dox);
+                levelCode++;
                 Statx ws = S();
-                return new whilex(we, ws);
+                levelCode--;
+                whilex tempw = new whilex(uniqueID++,we, ws);
+                if(levelCode == 0)
+                    codeIns[NumberIns++] = tempw;
+                return tempw;
+            case repeatx:
+                eat(repeatx);
+                levelCode++;
+                Statx rs = S();
+                levelCode--;
+                eat(untilx);
+                Expx re = E();
+                repeatx tempr = new repeatx(uniqueID++,re, rs);
+                if(levelCode == 0)
+                    codeIns[NumberIns++] = tempr;
+                return tempr;
             case beginx:
                 eat(beginx);
                 Statx s = S();
@@ -143,11 +176,17 @@ public class Parser {
                 declarationCheck(ident);
                 eat(igual);
                 Expx e = E();
-                return new Asignax(new Idx(ident), e);
+                Asignax tempA = new Asignax(new Idx(ident,SimboloIndex(ident), getType(ident)), e);
+                if(levelCode == 0)
+                    codeIns[NumberIns++] = tempA;
+                return tempA;
             case printx:
                 eat(printx);
                 Expx ex = E();
-                return new Printx(ex);
+                Printx tempP = new Printx(ex);
+                if(levelCode == 0)
+                    codeIns[NumberIns++] = tempP;
+                return tempP;
             default:
                 error(token, "(if | begin | id | print | while | do)");
                 return null;
@@ -170,64 +209,68 @@ public class Parser {
         }
     }
     
+    public int SimboloIndex(String name){
+        for(int i=0;i<tablaSimbolos.size();i++)
+            if(tablaSimbolos.get(i).s1.equals(name))
+                return i;
+        return -1;
+    }
+    
     public Expx E() {
        Idx i1, i2;
        String comp1, comp2;
-       
        if(tknCode == id) {
            comp1 = token;
            declarationCheck(token);
            eat(id); 
-           i1 = new Idx(token); 
+           i1 = new Idx(comp1,SimboloIndex(comp1), getType(comp1));
            switch(stringToCode(token)) {
-               
                case sum:  
-                   comp2 = tokenActual;
-                   eat(sum);   eat(id);
-                   i2 = new Idx(comp2); //(tokenActual)
-                   declarationCheck(comp2);
-                   compatibilityCheck(comp1,comp2);
-                   byteCode("suma", comp1, comp2);
-                   System.out.println("Operación: " + comp1 + "+" + comp2);
-                   return new Sumax(i1, i2);
+               comp2 = tokenActual;
+               eat(sum);
+               eat(id);
+                i2 = new Idx(comp2,SimboloIndex(comp2), getType(comp2)); //(tokenActual)
+                declarationCheck(comp2);
+                compatibilityCheck(comp1,comp2);
+                System.out.println("Operación: " + comp1 + "+" + comp2);
+                return new Sumax(i1, i2);
                    
                case igualdad:
                     comp2 = tokenActual;
                     eat(igualdad);
                     eat(id);
-                    i2 = new Idx(comp2);
+                    i2 = new Idx(comp2,SimboloIndex(comp2), getType(comp2));
                     declarationCheck(comp2);
                     compatibilityCheck(comp1,comp2);
-                    byteCode("igualdad", comp1, comp2);
                     return new Comparax(i1, i2);
                 
                 case restax:  
                    comp2 = tokenActual;
-                   eat(restax);   eat(id);
-                   i2 = new Idx(comp2); //(tokenActual)
+                   eat(restax);
+                   eat(id);
+                   i2 = new Idx(comp2,SimboloIndex(comp2), getType(comp2)); //(tokenActual)
                    declarationCheck(comp2);
                    compatibilityCheck(comp1,comp2);
-                   byteCode("resta", comp1, comp2);
                    System.out.println("Operación: " + comp1 + "-" + comp2);
                    return new Restax(i1, i2);
 
                 case divix:  
                    comp2 = tokenActual;
-                   eat(divix);   eat(id);
-                   i2 = new Idx(comp2); //(tokenActual)
+                   eat(divix);
+                   eat(id);
+                   i2 = new Idx(comp2,SimboloIndex(comp2), getType(comp2)); //(tokenActual)
                    declarationCheck(comp2);
                    compatibilityCheck(comp1,comp2);
-                   byteCode("division", comp1, comp2);
                    System.out.println("Operación: " + comp1 + "/" + comp2);
                    return new Divisionx(i1, i2);
                 
                case multix:  
                    comp2 = tokenActual;
-                   eat(multix);   eat(id);
-                   i2 = new Idx(comp2); //(tokenActual)
+                   eat(multix);
+                   eat(id);
+                   i2 = new Idx(comp2,SimboloIndex(comp2), getType(comp2)); //(tokenActual)
                    declarationCheck(comp2);
                    compatibilityCheck(comp1,comp2);
-                   byteCode("multiplicacion", comp1, comp2);
                    System.out.println("Operación: " + comp1 + "*" + comp2);
                    return new Multiplicacionx(i1, i2);
 
@@ -242,6 +285,23 @@ public class Parser {
        }
     } //FIN DEL ANÁLISIS SINTÁCTICO
     
+    public int getType(String variable){
+        int i=0;
+        for(i=0;i<tablaSimbolos.size();i++)
+            if( variable.equals( tablaSimbolos.get(i).s1 ) )
+                break;
+        switch ( tablaSimbolos.get(i).s2.getTypex() ) {
+            case "int":
+                return 0;
+            case "float":
+                return 1;
+            case "double":
+                return 2;
+            case "long":
+                return 3;
+        }
+        return -1;
+    }
     
     
     public void error(String token, String t) {
@@ -284,6 +344,8 @@ public class Parser {
             case "/": codigo=divix; break;
             case "while": codigo=whilex; break;
             case "do": codigo=dox; break;
+            case "repeat": codigo=repeatx; break;
+            case "until": codigo=untilx; break;
             default: codigo=id; break;
         }
         return codigo;
@@ -391,85 +453,61 @@ else{
         }
     }
     
-    public void byteCode(String tipo, String s1,String s2){
-        int pos1=-1, pos2=-1;
-        
-        for(int i=0; i<variable.length; i++) {
-            if(s1.equals(variable[i])) {
-                pos1 = i;
-            }
-            if(s2.equals(variable[i])) {
-                pos2 = i;
-            }
-        }
-        
-        switch(tipo) {
-          case "igualdad":
-            ipbc(cntIns + ": iload_"+pos1);
-            ipbc(cntIns + ": iload_"+pos2);
-            ipbc(cntIns + ": ifne " + (cntIns+4));
-            jmp1 = cntBC;
-          break;
+    // public void byteCode(String tipo, String s1, String s2) {
+    //     int pos1 = -1, pos2 = -1;
 
-          case "suma":
-            ipbc(cntIns + ": iload_"+pos1);
-            ipbc(cntIns + ": iload_"+pos2);
-            ipbc(cntIns + ": iadd");
-            jmp2 = cntBC;
-          break;
-          case "resta":
-            ipbc(cntIns + ": iload_"+pos1);
-            ipbc(cntIns + ": iload_"+pos2);
-            ipbc(cntIns + ": ires");
-            jmp2 = cntBC;
-          break;
-          case "multiplicacion":
-            ipbc(cntIns + ": iload_"+pos1);
-            ipbc(cntIns + ": iload_"+pos2);
-            ipbc(cntIns + ": imult");
-            jmp2 = cntBC;
-          break;
-          case "division":
-            ipbc(cntIns + ": iload_"+pos1);
-            ipbc(cntIns + ": iload_"+pos2);
-            ipbc(cntIns + ": idiv");
-            jmp2 = cntBC;
-          break;
-        }
-    }
-    
-    public void byteCode(String tipo, String s1) {
-        int pos1 = -1;
-        for(int i=0; i<variable.length; i++) {
-            if(s1.equals(variable[i])) {
-                pos1 = i;
-            }
-        }
-        switch(tipo) {
-            case "igual":
-                pilaBC[cntBC+3] = cntIns+4 + ": istore_" + pos1;
-                cntIns++;
-                jmp2 = cntBC;
-            break;
-        }
-    }
-    
+    //     for(int i = 0; i < variable.length; i++) {
+    //         if(s1.equals(variable[i])) pos1 = i;
+    //         if(s2.equals(variable[i])) pos2 = i;
+    //     }
+
+    //     switch(tipo) {
+    //         case "suma":
+    //             ipbc("iload_" + variable[pos1]);
+    //             ipbc("iload_" + variable[pos2]);
+    //             ipbc("iadd");
+    //             break;
+    //         case "resta":
+    //             ipbc("iload_" + variable[pos1]);
+    //             ipbc("iload_" + variable[pos2]);
+    //             ipbc("ires");
+    //             break;
+    //         case "multiplicacion":
+    //             ipbc("iload_" + variable[pos1]);
+    //             ipbc("iload_" + variable[pos2]);
+    //             ipbc("imult");
+    //             break;
+    //         case "division":
+    //             ipbc("iload_" + variable[pos1]);
+    //             ipbc("iload_" + variable[pos2]);
+    //             ipbc("idiv");
+    //             break;
+    //         case "igualdad":
+    //             ipbc("iload_" + variable[pos1]);
+    //             ipbc("iload_" + variable[pos2]);
+    //             ipbc("ifne " + (cntBC + 4));
+    //             break;
+    //     }
+    // }
+
     public void ipbc(String ins) {
-        while(pilaBC[cntBC] != null) {
-            cntBC++;
-        }
-        cntIns++;
         pilaBC[cntBC] = ins;
         cntBC++;
     }
     
     public String getBytecode() {
-        String JBC = "";
-        for(int i=0; i<pilaBC.length; i++) {
-            if(pilaBC[i] != null){
-                JBC = JBC + pilaBC[i] + "\n";
-            }
+        StringBuilder sb = new StringBuilder();
+        // header
+        for (int i=0; i<cntBC; i++) {
+            sb.append(pilaBC[i]).append("\n");
         }
-        return JBC;
-    }    
+        for (int i=0; i<codeIns.length; i++) {
+            if(codeIns[i] == null)
+                break;
+            sb.append( codeIns[i].getBytecode() ).append("\n");
+        }
+        sb.append("return");
+        return sb.toString();
+    }
+   
 }

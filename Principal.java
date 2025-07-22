@@ -10,8 +10,9 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 public class Principal {
     private static Scanner in = new Scanner(System.in);
     public static void main(String[] args) throws IOException {
-        Iniciar();
+        //Iniciar();
         // String codigo = "var1 int ; var2 int ; var1 := var2 + var1 ; print var1 + var2 ;  ";
+        new Parser( LeerArchivoEstatico() );
     }
     private static void Iniciar() throws IOException{
         int op;
@@ -77,7 +78,7 @@ public class Principal {
     }
 
 
-    private static String LeerArchivoEstatico(){
+    private Principal String LeerArchivoEstatico(){
         String codigo = "";
         try (BufferedReader lector = new BufferedReader(new FileReader(new File("prueba1_correcta.txt")))) {
                 String linea;
